@@ -1,0 +1,69 @@
+name: Create FAQ Article in BookStack
+
+on:
+  issues:
+    types: [opened, edited]
+
+jobs:
+  create-page:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: 18
+
+      - name: Install dependencies
+        run: npm install marked node-fetch@2
+
+      - name: Run BookStack Script
+        env:
+          BOOKSTACK_URL: ${{ secrets.BOOKSTACK_URL }}
+          BOOKSTACK_BOOK_ID: ${{ secrets.BOOKSTACK_BOOK_ID }}
+          BOOKSTACK_API_ID: ${{ secrets.BOOKSTACK_API_ID }}
+          BOOKSTACK_API_SECRET: ${{ secrets.BOOKSTACK_API_SECRET }}
+          ISSUE_TITLE: ${{ github.event.issue.title }}
+          ISSUE_BODY: ${{ github.event.issue.body }}
+          ISSUE_URL: ${{ github.event.issue.html_url }}
+        run: |
+          echo "const fetch = require('node-fetch');
+          const marked = require('marked');
+          
+          const title = process.env.ISSUE_TITLE;
+          const body = process.env.ISSUE_BODY || 'Нет описания';
+          const url = process.env.ISSUE_URL;
+          
+          // Конвертация Markdown в HTML
+          const htmlBody = marked.parse(body);
+          const fullHtml = \`<p><strong>Источник (GitHub Issue):</strong> <a href='\${url}'>\${url}</a></p>\n\${htmlBody}\`;
+          
+          const payload = {
+            name: title,
+            book_id: process.env.BOOKSTACK_BOOK_ID,
+            html: fullHtml
+          };
+          
+          console.log('Sending data to:', process.env.BOOKSTACK_URL);
+          
+          fetch(\`\${process.env.BOOKSTACK_URL}/api/pages\`, {
+            method: 'POST',
+            headers: {
+              'Authorization': \`Token \${process.env.BOOKSTACK_API_ID}:\${process.env.BOOKSTACK_API_SECRET}\`,
+              'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(payload)
+          }).then(res => {
+            if (!res.ok) {
+               console.log('Status:', res.status);
+               return res.text().then(text => { throw new Error(text) });
+            }
+            console.log('Page created successfully');
+          }).catch(err => {
+            console.error('Error:', err);
+            process.exit(1);
+          });" > script.js
+          
+          node script.js
