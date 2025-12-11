@@ -1,0 +1,5 @@
+blank_issues_enabled: false
+contact_links:
+  - name: База знаний
+    url: http://localhost:8080/books/faq-ecomarket
+    about: Проверьте базу знаний перед созданием вопроса
